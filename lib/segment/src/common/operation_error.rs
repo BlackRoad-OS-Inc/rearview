@@ -178,6 +178,10 @@ impl From<UniversalIoError> for OperationError {
             | UniversalIoError::IoUringNotSupported(_) => {
                 OperationError::service_error(err.to_string())
             }
+            UniversalIoError::BytemuckCast(_) => OperationError::service_error(err.to_string()),
+            UniversalIoError::Uninitialized { .. } => {
+                OperationError::service_error(err.to_string())
+            }
         }
     }
 }
