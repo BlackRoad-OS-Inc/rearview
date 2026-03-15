@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use bitvec::vec::BitVec;
-use common::mmap_hashmap::Key;
+use common::persisted_hashmap::keys::Key;
 use common::types::PointOffsetType;
 use gridstore::Blob;
 #[cfg(feature = "rocksdb")]

@@ -6,7 +6,7 @@ use common::counter::hardware_counter::HardwareCounterCell;
 use common::fs::clear_disk_cache;
 use common::mmap;
 use common::mmap::{AdviceSetting, MmapBitSlice, MmapSlice};
-use common::mmap_hashmap::{MmapHashMap, READ_ENTRY_OVERHEAD};
+use common::persisted_hashmap::mmap_hashmap::{MmapHashMap, READ_ENTRY_OVERHEAD};
 use common::types::PointOffsetType;
 use itertools::Either;
 use mmap_postings::{MmapPostingValue, MmapPostings};
