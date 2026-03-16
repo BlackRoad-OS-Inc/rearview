@@ -205,7 +205,6 @@ impl UpdateWorkers {
         optimization_finished_receiver: &mut watch::Receiver<()>,
         cancel: &CancellationToken,
     ) -> CollectionResult<()> {
-        let mut attempt: usize = 0;
         loop {
             let locked_segments = segments.clone();
             let has_deferred_points =
@@ -225,8 +224,8 @@ impl UpdateWorkers {
             }
 
             // The only way to make deferred points visible is optimization.
-            // Send Nop to re-trigger optimizers in case
-            // the previous signal was consumed without launching an optimization.
+            // Send Nop to re-trigger optimizers in case the previous signal was
+            // consumed without launching an optimization.
             let _ = optimize_sender.try_send(OptimizerSignal::Nop);
 
             // Wait for the optimizer to check conditions or complete an optimization.
@@ -249,14 +248,6 @@ impl UpdateWorkers {
                     }
                 }
             }
-
-            // Throttle retries to avoid busy-spinning when the optimizer cannot
-            // make progress (e.g. max_optimization_threads=0 or resource exhaustion).
-            // Skip on the first attempt so fast optimizations aren't penalized.
-            if attempt > 0 {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            }
-            attempt += 1;
         }
     }
 
