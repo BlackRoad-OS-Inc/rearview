@@ -195,11 +195,17 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
     })
 
     # Trigger an optimization pass with wait=True to ensure the write is applied.
-    # Use a short client timeout — we don't need the response, just the server-side effect.
+    # The server may respond with 408 (deferred wait timeout) or the client may
+    # time out first — either is fine, we only need the server-side write effect.
     # wait_collection_green handles waiting for optimization to complete.
+    trigger_points = make_points(total_points + 1, 1)
     try:
-        upsert_points(source_uri, start_id=total_points + 1, count=1, wait=True, client_timeout=5)
-    except requests.exceptions.ReadTimeout:
+        requests.put(
+            f"{source_uri}/collections/{COLLECTION_NAME}/points?wait=true",
+            json={"points": trigger_points},
+            timeout=5,
+        )
+    except requests.exceptions.RequestException:
         pass
 
     # Wait for optimization to complete on both peers
