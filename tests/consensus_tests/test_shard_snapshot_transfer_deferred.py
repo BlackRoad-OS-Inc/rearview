@@ -216,9 +216,13 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
         )
         if r.status_code == 200:
             break
-        # 500 = cancelled (old worker), retry
-        assert r.status_code == 500, (
+        # 408 = update applied but timed out waiting for deferred visibility (old worker cancelled), retry
+        assert r.status_code == 408, (
             f"Unexpected status {r.status_code} on attempt {attempt}: {r.text}"
+        )
+        error_message = r.json().get("status", {}).get("error", "")
+        assert "timed out waiting for deferred points" in error_message, (
+            f"Unexpected error message: {error_message}"
         )
         time.sleep(1)
     else:

@@ -236,9 +236,9 @@ impl UpdateWorkers {
                 biased;
                 _ = cancel.cancelled() => {
                     log::debug!("wait_for_deferred_points_ready cancelled");
-                    return Err(CollectionError::cancelled(
-                        "Update worker cancelled while waiting for deferred points"
-                    ));
+                    return Err(CollectionError::Timeout {
+                        description: "Update applied but timed out waiting for deferred points to become visible".to_string(),
+                    });
                 }
                 result = optimization_finished_receiver.changed() => {
                     if let Err(err) = result {

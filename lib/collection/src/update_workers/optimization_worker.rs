@@ -253,9 +253,6 @@ impl UpdateWorkers {
             },
             Some(limit),
         );
-        // If no optimization was launched, do NOT signal optimization_finished.
-        // The deferred wait loop in the update worker will block on changed()
-        // until a real optimization completes or the cancellation token fires.
         let mut handles = optimization_handles.lock().await;
         handles.append(&mut new_handles);
     }
