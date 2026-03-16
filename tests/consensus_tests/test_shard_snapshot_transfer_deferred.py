@@ -139,12 +139,15 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
 
     # Insert points with wait=False so points land in the deferred section
     # without triggering optimization
+    print(f"[DIAG] upserting {total_points} points with wait=False")
     upsert_points(source_uri, start_id=1, count=total_points, wait=False)
     time.sleep(3)
 
     # Verify that deferred points exist: only a fraction should be visible
+    print("[DIAG] scrolling source to check deferred behavior")
     source_visible = scroll_all(source_uri)
     visible_count = len(source_visible)
+    print(f"[DIAG] visible={visible_count}/{total_points}")
     assert visible_count > 0, "Some points should be visible (within threshold)"
     assert visible_count < total_points, (
         f"Not all points should be visible (most are deferred), "
@@ -159,6 +162,7 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
     to_peer_id = dst_info["peer_id"]
     shard_id = src_info["local_shards"][0]["shard_id"]
 
+    print(f"[DIAG] starting snapshot shard transfer from {from_peer_id} to {to_peer_id}")
     r = requests.post(
         f"{source_uri}/collections/{COLLECTION_NAME}/cluster",
         json={
@@ -173,7 +177,9 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
     assert_http_ok(r)
 
     # Wait for the transfer to complete
+    print("[DIAG] waiting for shard transfer to complete")
     wait_for_collection_shard_transfers_count(source_uri, COLLECTION_NAME, 0)
+    print("[DIAG] shard transfer complete")
 
     # Verify the target now has the shard
     dst_info_after = get_collection_cluster_info(target_uri, COLLECTION_NAME)
@@ -190,6 +196,7 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
     )
 
     # Enable optimizers to resolve deferred points
+    print("[DIAG] enabling optimizers (max_optimization_threads=auto)")
     update_collection_config(source_uri, {
         "optimizers_config": {"max_optimization_threads": "auto"},
     })
@@ -198,6 +205,7 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
     # The server may respond with 408 (deferred wait timeout) or the client may
     # time out first — either is fine, we only need the server-side write effect.
     # wait_collection_green handles waiting for optimization to complete.
+    print("[DIAG] trigger upsert with wait=true (client_timeout=5)")
     trigger_points = make_points(total_points + 1, 1)
     try:
         requests.put(
@@ -205,12 +213,16 @@ def test_shard_snapshot_transfer_includes_deferred_points(tmp_path: pathlib.Path
             json={"points": trigger_points},
             timeout=5,
         )
-    except requests.exceptions.RequestException:
-        pass
+        print("[DIAG] trigger upsert returned OK")
+    except requests.exceptions.RequestException as e:
+        print(f"[DIAG] trigger upsert exception (expected): {type(e).__name__}")
 
     # Wait for optimization to complete on both peers
+    print("[DIAG] waiting for source to go green")
     wait_collection_green(source_uri, COLLECTION_NAME)
+    print("[DIAG] source green, waiting for target to go green")
     wait_collection_green(target_uri, COLLECTION_NAME)
+    print("[DIAG] target green")
 
     # After optimization ALL points (including previously deferred) must be visible
     expected_total = total_points + 1
