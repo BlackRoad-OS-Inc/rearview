@@ -1,3 +1,5 @@
+#![cfg(not(target_os = "windows"))]
+
 mod cached_slice;
 mod controller;
 #[cfg(test)]
