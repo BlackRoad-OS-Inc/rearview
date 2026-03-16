@@ -153,6 +153,7 @@ impl UpdateWorkers {
                             &segments,
                             &optimize_sender,
                             &mut optimization_finished_receiver,
+                            &cancel,
                         )
                         .await;
                         if let Err(err) = wait_result {
@@ -190,6 +191,11 @@ impl UpdateWorkers {
 
     /// Wait until all deferred points are ready for read/search.
     ///
+    /// Returns `Ok(())` when all deferred points have been optimized.
+    ///
+    /// Returns an error if the cancellation token is triggered (e.g. update
+    /// handler restarted due to a config change via consensus).
+    ///
     /// # Cancel safety
     ///
     /// This function is cancel safe.
@@ -197,7 +203,9 @@ impl UpdateWorkers {
         segments: &LockedSegmentHolder,
         optimize_sender: &Sender<OptimizerSignal>,
         optimization_finished_receiver: &mut watch::Receiver<()>,
+        cancel: &CancellationToken,
     ) -> CollectionResult<()> {
+        let mut attempt: usize = 0;
         loop {
             let locked_segments = segments.clone();
             let has_deferred_points =
@@ -222,12 +230,33 @@ impl UpdateWorkers {
             let _ = optimize_sender.try_send(OptimizerSignal::Nop);
 
             // Wait for the optimizer to check conditions or complete an optimization.
+            // Also check cancellation so we don't block forever if the update handler
+            // is restarted (e.g. config change via consensus).
             log::debug!("waiting for optimization to allow updates");
-            if let Err(err) = optimization_finished_receiver.changed().await {
-                // This can be if optimization is cancelled, we don't need to wait anymore.
-                log::debug!("Optimization thread terminated with an error: {err}");
-                return Ok(());
+            tokio::select! {
+                biased;
+                _ = cancel.cancelled() => {
+                    log::debug!("wait_for_deferred_points_ready cancelled");
+                    return Err(CollectionError::cancelled(
+                        "Update worker cancelled while waiting for deferred points"
+                    ));
+                }
+                result = optimization_finished_receiver.changed() => {
+                    if let Err(err) = result {
+                        // This can be if optimization is cancelled, we don't need to wait anymore.
+                        log::debug!("Optimization thread terminated with an error: {err}");
+                        return Ok(());
+                    }
+                }
             }
+
+            // Throttle retries to avoid busy-spinning when the optimizer cannot
+            // make progress (e.g. max_optimization_threads=0 or resource exhaustion).
+            // Skip on the first attempt so fast optimizations aren't penalized.
+            if attempt > 0 {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+            attempt += 1;
         }
     }
 
