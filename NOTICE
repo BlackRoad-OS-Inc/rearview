@@ -1,0 +1,17 @@
+NOTICE — Third-Party Software Attribution
+==========================================
+
+This repository (rearview) is based on Qdrant.
+
+Original Project: Qdrant
+Original Repository: https://github.com/qdrant/qdrant
+Original License: Apache-2.0
+
+The original code is copyright its respective authors and is used in
+compliance with the Apache-2.0 license. BlackRoad OS, Inc.
+modifications and additions are proprietary.
+
+A copy of the original Apache-2.0 license can be found at:
+https://github.com/qdrant/qdrant/blob/main/LICENSE
+
+© 2024-2026 BlackRoad OS, Inc. All rights reserved for modifications.
