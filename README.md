@@ -1,3 +1,11 @@
+# rearview
+
+> RearView — Sovereign vector database. BlackRoad fork of Qdrant. RAG, semantic search, AI memory.
+
+Part of the [BlackRoad OS](https://blackroad.io) ecosystem — [BlackRoad-OS-Inc](https://github.com/BlackRoad-OS-Inc)
+
+---
+
 # RearView — BlackRoad Road Fleet
 
 > **Sovereign vector database.** Fork of [Qdrant](https://github.com/qdrant/qdrant).
